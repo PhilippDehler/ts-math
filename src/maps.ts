@@ -1,5 +1,6 @@
 export type DIGIT = keyof DecimalAddMap;
 export type ADD_CARRY = 0 | 1;
+
 //prettier-ignore
 export type DecimalAddMap = {
     0: { 0: { 0: { sum: 0; carry: 0 }; 1: { sum: 1; carry: 0 } }; 1: { 0: { sum: 1; carry: 0 }; 1: { sum: 2; carry: 0 } }; 2: { 0: { sum: 2; carry: 0 }; 1: { sum: 3; carry: 0 } }; 3: { 0: { sum: 3; carry: 0 }; 1: { sum: 4; carry: 0 } }; 4: { 0: { sum: 4; carry: 0 }; 1: { sum: 5; carry: 0 } }; 5: { 0: { sum: 5; carry: 0 }; 1: { sum: 6; carry: 0 } }; 6: { 0: { sum: 6; carry: 0 }; 1: { sum: 7; carry: 0 } }; 7: { 0: { sum: 7; carry: 0 }; 1: { sum: 8; carry: 0 } }; 8: { 0: { sum: 8; carry: 0 }; 1: { sum: 9; carry: 0 } }; 9: { 0: { sum: 9; carry: 0 }; 1: { sum: 0; carry: 1 } };};

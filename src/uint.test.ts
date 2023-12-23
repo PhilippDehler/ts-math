@@ -58,7 +58,11 @@ type T40 = Test.Assert<Test.Equal<UInt.Min<[]>, UInt.Parse<"Infinity">>>;
 type T41 = Test.Assert<Test.Equal<UInt.IsEven<UInt.Parse<"0">>, true>>;
 type T42 = Test.Assert<Test.Equal<UInt.IsEven<UInt.Parse<"1">>, false>>;
 type T43 = Test.Assert<Test.Equal<UInt.IsEven<UInt.Parse<"2">>, true>>;
-
-type T44 = Test.Assert<Test.Equal<UInt.Parse<UInt.Parse<"asdad">>, UInt.Parse<"NaN">>>;
+type T44 = Test.Assert<Test.Equal<UInt.Parse<"asdad">, UInt.Parse<"NaN">>>;
+type T45 = Test.Assert<Test.Equal<UInt.Parse<"NaN">, UInt.Parse<"NaN">>>;
+// some modulo tests
+type T46 = Test.Assert<Test.Equal<UInt.Modulo<UInt.Parse<"5">, UInt.Parse<"asd">>, UInt.Parse<"NaN">>>;
+type T47 = Test.Assert<Test.Equal<UInt.Modulo<UInt.Parse<"5">, UInt.Parse<"Infinity">>, UInt.Parse<"5">>>;
+type T48 = Test.Assert<Test.Equal<UInt.Modulo<UInt.Parse<"NaN">, UInt.Parse<"Infinity">>, UInt.Parse<"NaN">>>;
 
 }
