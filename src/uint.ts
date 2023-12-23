@@ -219,11 +219,9 @@ export namespace UInt {
         : __FilterLeadingZeros<Sum<Product>>;
   // prettier-ignore
   /**Special cases are handled here*/
-  export type Multiply<A extends Type, B extends Type> = A extends DIGIT[]
-    ? B extends DIGIT[]
-      ? B extends [0] ? [0] : __Multiply<A, B> 
-      : B
-    : B extends NaN ? NaN : A;
+  export type Multiply<A extends Type, B extends Type> = 
+    A extends DIGIT[] ? B extends DIGIT[] ? B extends [0] ? [0] : __Multiply<A, B> : A extends [0] ? NaN : B
+                      : B extends DIGIT[] ? B extends [0] ? NaN : A : B extends NaN ? NaN : A
 
   // prettier-ignore
   export type Product<A extends Type[], Agg extends Type = [1]> = 
@@ -283,7 +281,7 @@ export namespace UInt {
 
   //prettier-ignore
   type CountPossibleSubtractions<A extends UInt_Type, B extends UInt_Type> =
-    Compare<A, B> extends "LESS_THAN" ? 0 
+      Compare<A, B> extends "LESS_THAN" ? 0 
     : Compare<A, Multiply<B, [2]>> extends "LESS_THAN" ? 1 
     : Compare<A, Multiply<B, [3]>> extends "LESS_THAN" ? 2 
     : Compare<A, Multiply<B, [4]>> extends "LESS_THAN" ? 3 
@@ -348,13 +346,15 @@ export namespace UInt {
 
   //prettier-ignore
   export type Divide<A extends Type, B extends Type> = 
-    A extends DIGIT[] ? B extends DIGIT[]
-        ? B extends [0] ? A extends [0] 
-                          ? NaN
-                          : UInt.Infinity
-        : __Divide<A, B>
-      : B
-    : B extends NaN ? NaN : A;
+  A extends NaN ? NaN 
+  : B extends NaN ? NaN
+  : A extends Infinity ? B extends Infinity ? NaN : Infinity
+  // A is not NaN or Infinity
+  : B extends Infinity ? [0]
+  // A is not NaN, Infinity, B is not NaN or Infinity
+  : B extends [0] ? Infinity
+  : A extends [0] ? [0]
+  : A extends DIGIT[] ? B extends DIGIT[] ? __Divide<A, B> : never : never;
 
   //prettier-ignore
   /**
@@ -453,22 +453,45 @@ export namespace UInt {
         : EQUAL;
 
   //prettier-ignore
-  export type Compare<A extends Type, B extends Type> = A extends DIGIT[]
-    ? B extends DIGIT[]
-      ? __Compare<A, B>
-      : B extends UInt.Infinity ? LESS_THAN : B extends NaN ? NaN : never
-    : A extends UInt.Infinity ? B extends DIGIT[] ? GREATER_THAN : A extends NaN ? NaN : never : never;
+  /**
+   * @warning NaN will cause this function to return NEVER. Please use LT, GT, LTE, GTE, EQ instead
+   */
+  export type Compare<A extends Type, B extends Type> = 
+      A extends DIGIT[] ? B extends DIGIT[] ? __Compare<A, B> : B extends UInt.Infinity ? LESS_THAN  : never
+                        : B extends DIGIT[] ? GREATER_THAN : never;
+
+  //prettier-ignore
+  export type GT<A extends Type, B extends Type> = 
+    NaN extends A | B ? false : [IsInfinity<A> | IsInfinity<B>] extends [true] ? false : Compare<A, B> extends "GREATER_THAN" ? true : false;
+
+  //prettier-ignore
+  export type LT<A extends Type, B extends Type> = 
+    NaN extends A | B ? false : [IsInfinity<A> | IsInfinity<B>] extends [true] ? false :  Compare<A, B> extends "LESS_THAN" ? true : false;
+
+  //prettier-ignore
+  export type EQ<A extends Type, B extends Type> = 
+    NaN extends A | B ? false : [IsInfinity<A> | IsInfinity<B>] extends [true] ? false :  Compare<A, B> extends "EQUAL" ? true : false;
+
+  //prettier-ignore
+  export type GTE<A extends Type, B extends Type> =  EQ<A, B> extends true ? true : GT<A, B>;
+  //prettier-ignore
+  export type LTE<A extends Type, B extends Type> =  EQ<A, B> extends true ? true : LT<A, B>;
+
+  export type IsNaN<A extends Type> = A extends NaN ? true : false;
+  export type IsInfinity<A extends Type> = A extends UInt.Infinity
+    ? true
+    : false;
 
   //prettier-ignore
   export type Min<A extends Type[], Agg extends Type = UInt.Infinity> = 
     A extends [infer Fst extends Type, ...infer Rest extends Type[]]
-      ? Min<Rest, Compare<Fst, Agg> extends "LESS_THAN" ? Fst : Agg>
+      ? Min<Rest, LT<Fst, Agg> extends true ? Fst : Agg>
       : Agg;
 
   //prettier-ignore
   export type Max<A extends Type[], Agg extends Type = [0]> = 
     A extends [infer Fst extends Type, ...infer Rest extends Type[]]
-      ? Max<Rest, Compare<Fst, Agg> extends "GREATER_THAN" ? Fst : Agg>
+      ? Max<Rest, GT<Fst, Agg> extends true ? Fst : Agg>
       : Agg;
 
   /**
@@ -486,15 +509,18 @@ export namespace UInt {
       ? Agg
       : __Power<A, Subtract<B, [1]>, Multiply<Agg, A>>;
 
-  export type Power<A extends Type, B extends Type> = A extends DIGIT[]
-    ? B extends DIGIT[]
-      ? B extends [0]
-        ? [1]
-        : __Power<A, B>
-      : B
-    : B extends NaN
-    ? NaN
-    : A;
+  //prettier-ignore
+  export type Power<A extends Type, B extends Type> = 
+  A extends NaN ? NaN 
+  : B extends NaN ? NaN
+  // A is not NaN, B is not NaN
+  : B extends [0] ? [1]
+  : A extends [0] ? [0]
+  : A extends Infinity ? Infinity
+  // A is not NaN or Infinity
+  : B extends Infinity ? Infinity
+  // A is not NaN, Infinity, B is not NaN or Infinity
+  : A extends DIGIT[] ? B extends DIGIT[] ? __Power<A, B> : never : never;
 
   //prettier-ignore
   /**
@@ -525,4 +551,17 @@ export namespace UInt {
       ? A
       : __SquareRoot<A>
     : A;
+
+  type __Factorial<
+    T extends UInt_Type,
+    Agg extends UInt_Type = [1]
+  > = T extends [0] ? Agg : __Factorial<Decrement<T>, Multiply<Agg, T>>;
+
+  export type Factorial<T extends Type> = T extends DIGIT[]
+    ? __Factorial<T>
+    : T;
+  // //prettier-ignore
+  // type __IsPrime<T extends UInt_Type> =
+  //   T extends [0 | 1] ? false :
+  //   Print<T> extends keyof Primes ? true : GT<T, Parse<"10000">> extends true ? never : false;
 }

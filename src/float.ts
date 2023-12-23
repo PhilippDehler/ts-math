@@ -4,15 +4,15 @@ import { DIGIT } from "./maps";
 import { UInt } from "./uint";
 
 export namespace Float {
-  export type Type = { sign: boolean; digits: UInt.Type };
-  type PRECISION = 10;
+  export type Type = Int.Type;
+  type PRECISION = 4;
+
   type Fill<
     T extends number,
     Item extends DIGIT = 0,
     Agg extends UInt.Type = []
   > = Agg["length"] extends T ? Agg : Fill<T, Item, [...Agg, Item]>;
 
-  type Ten_Digits = Fill<PRECISION, DIGIT>;
   //prettier-ignore
   export type Append<T extends UInt.Type> =  [...T, ...Fill<PRECISION>]
   //prettier-ignore
@@ -29,6 +29,14 @@ export namespace Float {
         : TakeRight<T, [...Agg, 0]>;
 
   //prettier-ignore
+  type AppendZeros<T extends string,  Agg extends string = "", C extends any[] = []> = 
+    C["length"] extends PRECISION 
+        ? Agg
+        : T extends `${infer P}${infer Rest}`
+            ? AppendZeros<Rest, `${Agg}${P}`, [...C, any]>
+            : AppendZeros<T, `${Agg}${0}`, [...C, any]>;
+
+  //prettier-ignore
   export type Parse<
   T extends string,
 > = T extends `-${infer Fst}.${infer Rest}`
@@ -37,21 +45,19 @@ export namespace Float {
         ? { sign: true; digits: UInt.Parse<`${Fst}${AppendZeros<Rest>}`> }
         : { sign: true; digits: UInt.Parse<`${T}${AppendZeros<"">}`> };
 
-  export type Print<T extends Type> = `${Int.Print<{
-    sign: T["sign"];
-    digits: Drop<T["digits"]>;
-  }>}.${UInt.Print<TakeRight<T["digits"]>>}`;
-
-  //prettier-ignore
-  type AppendZeros<T extends string,  Agg extends string = "", C extends any[] = []> = 
-    C["length"] extends PRECISION 
-        ? Agg
-        : T extends `${infer P}${infer Rest}`
-            ? AppendZeros<Rest, `${Agg}${P}`, [...C, any]>
-            : AppendZeros<T, `${Agg}${0}`, [...C, any]>;
+  export type Print<T extends Type> = T extends Int.NaN
+    ? "NaN"
+    : T["digits"] extends UInt.Infinity
+    ? Print<T>
+    : `${Int.Print<{
+        sign: T["sign"];
+        digits: Drop<T["digits"]>;
+      }>}.${UInt.Print<TakeRight<T["digits"]>>}`;
 
   export type Add<A extends Type, B extends Type> = Int.Add<A, B>;
+  //prettier-ignore
   export type Subtract<A extends Type, B extends Type> = Int.Subtract<A, B>;
+
   export type Sum<A extends Type[]> = Int.Sum<A>;
   //prettier-ignore
   export type Product<A extends Type[], Agg extends Type> = 
@@ -76,9 +82,9 @@ export namespace Float {
 
   //prettier-ignore
   export type Power<A extends Type, B extends UInt.Type, Agg extends Type = Parse<"1">> = 
-  B extends [0]
-    ? Parse<"1">
-    : Power<A, UInt.Subtract<B, [1]>, Multiply<Agg, A>>;
+    B extends [0]
+      ? Parse<"1">
+      : Power<A, UInt.Subtract<B, [1]>, Multiply<Agg, A>>;
 
   type NextGuess<
     Base extends Type,
@@ -87,8 +93,12 @@ export namespace Float {
   > = Subtract<
     Previous,
     Divide<
-      Subtract<Power<Previous, N>, Base>,
-      Multiply<UIntToFloat<N>, Power<Previous, UInt.Subtract<N, [1]>>>
+      Power<Previous, N> extends infer Y extends Type
+        ? Subtract<Y, Base>
+        : never,
+      Power<Previous, UInt.Subtract<N, [1]>> extends infer Z extends Type
+        ? Multiply<UIntToFloat<N>, Z>
+        : never
     >
   >;
 
