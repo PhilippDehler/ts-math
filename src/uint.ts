@@ -1,6 +1,8 @@
 import { Bool } from "./boolean";
 import {
+  ADD_CARRY,
   CompareMap,
+  DIGIT,
   DecimalAddMap,
   DecimalSubtractMap,
   EQUAL,
@@ -27,8 +29,6 @@ import {
 //Note: Strings could be more performant than arrays, but I'm not sure
 
 export namespace UInt {
-  export type DIGIT = keyof DecimalAddMap;
-  type CARRY = 0 | 1;
   export type Type = DIGIT[];
 
   // prettier-ignore
@@ -81,7 +81,7 @@ export namespace UInt {
    * Case 3
    */
   // prettier-ignore
-  export type Add<A extends Type, B extends Type, Carry extends CARRY = 0, Sum extends Type = []> = 
+  export type Add<A extends Type, B extends Type, Carry extends ADD_CARRY = 0, Sum extends Type = []> = 
     A extends [...infer AInit extends Type, infer ALast extends DIGIT] 
         ? B extends [...infer BInit extends Type, infer BLast extends DIGIT] 
 /*case: 1*/ ? Add<AInit, BInit, DecimalAddMap[ALast][BLast][Carry]["carry"], [DecimalAddMap[ALast][BLast][Carry]["sum"], ...Sum]> 
@@ -215,7 +215,7 @@ export namespace UInt {
    *
    */
   // prettier-ignore
-  export type Subtract<A extends Type, B extends Type, Borrow extends CARRY = 0, Difference extends Type = []> = 
+  export type Subtract<A extends Type, B extends Type, Borrow extends ADD_CARRY = 0, Difference extends Type = []> = 
     A extends [...infer AInit extends Type, infer ALast extends DIGIT] 
         ? B extends [...infer BInit extends Type, infer BLast extends DIGIT] 
 /*case: 1*/ ? Subtract<AInit, BInit, DecimalSubtractMap[ALast][BLast][Borrow]["borrow"], [DecimalSubtractMap[ALast][BLast][Borrow]["difference"], ...Difference]> 
@@ -441,4 +441,16 @@ export namespace UInt {
 > = Count["length"] extends IterationCount
   ? Approximation 
   : Root<A,B, Newton_Method_N<A,B, Approximation>, IterationCount, [...Count, unknown]>;
+
+  //prettier-ignore
+  export type Min<A extends Type[], Agg extends Type = A[0]> = 
+    A extends [infer Fst extends Type, ...infer Rest extends Type[]]
+      ? Min<Rest, Compare<Fst, Agg> extends "LESS_THAN" ? Fst : Agg>
+      : Agg;
+
+  //prettier-ignore
+  export type Max<A extends Type[], Agg extends Type = [0]> = 
+    A extends [infer Fst extends Type, ...infer Rest extends Type[]]
+      ? Max<Rest, Compare<Fst, Agg> extends "GREATER_THAN" ? Fst : Agg>
+      : Agg;
 }
