@@ -42,6 +42,9 @@ export namespace UInt {
         ? Print<Rest, `${Num}${Fst}`>
         : Num extends "" ? "0" : Num;
 
+  export type IsZero<T extends Type> = FilterLeadingZeros<T> extends [0]
+    ? true
+    : false;
   /**
    *
    * @param A - Internal number e.g: [1, 1, 2, 3]
@@ -224,7 +227,7 @@ export namespace UInt {
 /*case: 3*/ ? FilterLeadingZeros<[...B, ...Difference]> // the commeted lines are just an optimization, but it's not necessary                                 
             : B extends [...infer Init1 extends Type, infer Last1 extends DIGIT]                               
 /*case: 4*/     ? Subtract<Init1, [], DecimalSubtractMap[Last1][0][Borrow]["borrow"], [DecimalSubtractMap[Last1][0][Borrow]["difference"], ...Difference]>        
-/*case: 5*/     : Borrow extends 1 ? [1, ...Difference] : FilterLeadingZeros<Difference>;
+/*case: 5*/     : Borrow extends 1 ? [0] : FilterLeadingZeros<Difference>;
 
   export type Decrement<T extends Type> = Subtract<T, [1]>;
 
@@ -375,6 +378,18 @@ export namespace UInt {
             : Fst
         : EQUAL;
 
+  //prettier-ignore
+  export type Min<A extends Type[], Agg extends Type = A[0]> = 
+    A extends [infer Fst extends Type, ...infer Rest extends Type[]]
+      ? Min<Rest, Compare<Fst, Agg> extends "LESS_THAN" ? Fst : Agg>
+      : Agg;
+
+  //prettier-ignore
+  export type Max<A extends Type[], Agg extends Type = [0]> = 
+    A extends [infer Fst extends Type, ...infer Rest extends Type[]]
+      ? Max<Rest, Compare<Fst, Agg> extends "GREATER_THAN" ? Fst : Agg>
+      : Agg;
+
   /**
    * @param A - Internal number e.g: [2, 3]
    * @param B - Internal number e.g: [1, 8]
@@ -387,7 +402,7 @@ export namespace UInt {
   //prettier-ignore
   export type Power<A extends Type, B extends Type,Agg extends Type = [1]> = 
     B extends [0]
-      ? [1]
+      ? Agg
       : Power<A, Subtract<B, [1]>, Multiply<Agg, A>>;
 
   //prettier-ignore
@@ -414,43 +429,4 @@ export namespace UInt {
     Divide<A, EducatedGuess<A>>,
     5
   >;
-
-  //prettier-ignore
-  /**
-   * https://en.wikipedia.org/wiki/Newton%27s_method
-   */
-  type Newton_Method_N<
-    Base extends Type,
-    N extends Type,
-    Previous extends Type
-  > = Subtract<
-        Previous,
-        Divide<
-          Subtract<Power<Previous, N>, Base>,
-          Multiply<N, Power<Previous, Subtract<N, [1]>>>
-        >
-      >;
-
-  //prettier-ignore
-  export type Root<
-    A extends Type,
-    B extends Type,
-    Approximation extends Type,
-    IterationCount extends number = 10,
-    Count extends any[] = []
-> = Count["length"] extends IterationCount
-  ? Approximation 
-  : Root<A,B, Newton_Method_N<A,B, Approximation>, IterationCount, [...Count, unknown]>;
-
-  //prettier-ignore
-  export type Min<A extends Type[], Agg extends Type = A[0]> = 
-    A extends [infer Fst extends Type, ...infer Rest extends Type[]]
-      ? Min<Rest, Compare<Fst, Agg> extends "LESS_THAN" ? Fst : Agg>
-      : Agg;
-
-  //prettier-ignore
-  export type Max<A extends Type[], Agg extends Type = [0]> = 
-    A extends [infer Fst extends Type, ...infer Rest extends Type[]]
-      ? Max<Rest, Compare<Fst, Agg> extends "GREATER_THAN" ? Fst : Agg>
-      : Agg;
 }

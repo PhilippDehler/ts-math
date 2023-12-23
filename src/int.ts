@@ -1,5 +1,5 @@
 import { Bool } from "./boolean";
-import { LESS_THAN } from "./maps";
+import { DIGIT, LESS_THAN } from "./maps";
 import { UInt } from "./uint";
 
 /**
@@ -21,7 +21,7 @@ import { UInt } from "./uint";
 export namespace Int {
   export type Type = {
     sign: boolean;
-    digits: UInt.DIGIT[];
+    digits: DIGIT[];
   };
 
   export type Parse<T extends string> = T extends `-${infer Rest}`
@@ -31,6 +31,11 @@ export namespace Int {
   export type Print<T extends Type> = `${T["sign"] extends true
     ? ""
     : "-"}${UInt.Print<T["digits"]>}`;
+
+  export type UIntToInt<A extends UInt.Type> = {
+    sign: true;
+    digits: A;
+  };
 
   //prettier-ignore
   export type Add<A extends Type, B extends Type> = 
@@ -61,10 +66,19 @@ export namespace Int {
                 : { sign: true,  digits: UInt.Subtract<A["digits"], B["digits"]> }
 
   //prettier-ignore
-
+  export type Sum<A extends Type[], Agg extends Type = Parse<"0">> = 
+    A extends [infer Head extends Type, ...infer Tail extends Type[]]
+      ? Sum<Tail, Add<Head, Agg>>
+      : Agg;
   //prettier-ignore
   export type Multiply<A extends Type, B extends Type> =
     { sign: Bool.XNOR<A["sign"], B["sign"]>, digits: UInt.Multiply<A["digits"], B["digits"]> };
+
+  //prettier-ignore
+  export type Product<A extends Type[], Agg extends Type> = 
+    A extends [infer Head extends Type, ...infer Tail extends Type[]]
+      ? Product<Tail, Multiply<Head, Agg>>
+      : Agg;
 
   //prettier-ignore
   export type Divide<A extends Type, B extends Type> =
@@ -75,22 +89,84 @@ export namespace Int {
     digits: UInt.Modulo<A["digits"], B["digits"]>;
   };
 
-  //prettier-ignore
-  export type IsEven<A extends Type> = A["digits"] extends [...any[], infer Last]
-  ? Last extends 0 | 2 | 4 | 6 | 8 ? true : false
-  : false;
-  //prettier-ignore
-  export type IsOdd<A extends Type> = Bool.Not<IsEven<A>>;
+  export type IsEven<A extends Type> = UInt.IsEven<A["digits"]>;
+  export type IsOdd<A extends Type> = UInt.IsOdd<A["digits"]>;
 
   export type Power<A extends Type, B extends UInt.Type> = {
     sign: UInt.IsEven<B> extends true ? true : A["sign"];
     digits: UInt.Power<A["digits"], B>;
   };
 
-  export type Abs<A extends Type> = A["digits"];
+  //prettier-ignore
+  export type Compare<A extends Type, B extends Type> = 
+    A["sign"] extends true
+      ? B["sign"] extends true
+        ? UInt.Compare<B["digits"], A["digits"]>
+        : "LESS_THAN"
+      : B["sign"] extends true
+          ? "GREATER_THAN"
+          : UInt.Compare<B["digits"], A["digits"]>;
+
+  //prettier-ignore
+  export type Min<A extends Type[], B extends Type = A[0]> =
+    A extends [infer Head extends Type, ...infer Tail extends Type[]]
+      ? Min<Tail, Compare<Head, B> extends "LESS_THAN" ? Head : B>
+      : B extends undefined ? never : B;
+
+  //prettier-ignore
+  export type Max<A extends Type[], B extends Type = A[0]> =
+    A extends [infer Head extends Type, ...infer Tail extends Type[]]
+      ? Max<Tail, Compare<Head, B> extends "GREATER_THAN" ? Head : B>
+      : B extends undefined ? never : B;
+
+  export type IsPositive<A extends Type> = A["sign"];
+  export type IsNegative<A extends Type> = Bool.Not<A["sign"]>;
+  export type IsZero<A extends Type> = UInt.IsZero<A["digits"]>;
+  export type Abs<A extends Type> = { sign: true; digits: A["digits"] };
 
   export type SquareRoot<A extends Type> = {
     sign: true;
     digits: UInt.SquareRoot<A["digits"]>;
+  };
+
+  //prettier-ignore
+  /**
+   * https://en.wikipedia.org/wiki/Newton%27s_method
+   */
+  type Newton_Method_N<
+    Base extends Type,
+    N extends UInt.Type,
+    Previous extends Type
+  > = Subtract<
+        Previous,
+        Divide<
+          Subtract<Power<Previous, N>, Base>,
+          Multiply<UIntToInt<N>, Power<Previous, UInt.Subtract<N, [1]>>>
+        >
+      >;
+
+  export type __Root<
+    A extends Type,
+    B extends UInt.Type,
+    Approximation extends Type,
+    IterationCount extends number = 10,
+    Count extends any[] = []
+  > = Count["length"] extends IterationCount
+    ? Approximation
+    : __Root<
+        A,
+        B,
+        Newton_Method_N<A, B, Approximation>,
+        IterationCount,
+        [...Count, unknown]
+      >;
+
+  export type Root<
+    A extends Type,
+    B extends UInt.Type,
+    Approximation extends Type
+  > = {
+    sign: true;
+    digits: __Root<A, B, Approximation>;
   };
 }
