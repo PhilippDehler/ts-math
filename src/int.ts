@@ -1,4 +1,4 @@
-import { BOOL } from "./boolean";
+import { Bool } from "./boolean";
 import { LESS_THAN } from "./maps";
 import { UInt } from "./uint";
 
@@ -64,11 +64,11 @@ export namespace Int {
 
   //prettier-ignore
   export type Multiply<A extends Type, B extends Type> =
-    { sign: BOOL.XNOR<A["sign"], B["sign"]>, digits: UInt.Multiply<A["digits"], B["digits"]> };
+    { sign: Bool.XNOR<A["sign"], B["sign"]>, digits: UInt.Multiply<A["digits"], B["digits"]> };
 
   //prettier-ignore
   export type Divide<A extends Type, B extends Type> =
-    { sign: BOOL.XNOR<A["sign"], B["sign"]>, digits: UInt.Divide<A["digits"], B["digits"]> };
+    { sign: Bool.XNOR<A["sign"], B["sign"]>, digits: UInt.Divide<A["digits"], B["digits"]> };
 
   export type Modulo<A extends Type, B extends Type> = {
     sign: A["sign"];
@@ -80,7 +80,7 @@ export namespace Int {
   ? Last extends 0 | 2 | 4 | 6 | 8 ? true : false
   : false;
   //prettier-ignore
-  export type IsOdd<A extends Type> = BOOL.Not<IsEven<A>>;
+  export type IsOdd<A extends Type> = Bool.Not<IsEven<A>>;
 
   export type Power<A extends Type, B extends UInt.Type> = {
     sign: UInt.IsEven<B> extends true ? true : A["sign"];

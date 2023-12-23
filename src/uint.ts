@@ -1,3 +1,4 @@
+import { Bool } from "./boolean";
 import {
   CompareMap,
   DecimalAddMap,
@@ -23,6 +24,8 @@ import {
  *  - Nth-Root
  * -
  */
+//Note: Strings could be more performant than arrays, but I'm not sure
+
 export namespace UInt {
   export type DIGIT = keyof DecimalAddMap;
   type CARRY = 0 | 1;
@@ -39,8 +42,6 @@ export namespace UInt {
         ? Print<Rest, `${Num}${Fst}`>
         : Num extends "" ? "0" : Num;
 
-  //IDEA: Strings could be more performant than arrays, but I'm not sure
-
   /**
    *
    * @param A - Internal number e.g: [1, 1, 2, 3]
@@ -52,7 +53,8 @@ export namespace UInt {
    *
    * @example
    * type X = Adder<InternalNumber<"1123">, InternalNumber<"987">>;
-   * -> X = InternalNumber<"2110">
+   * //-> X = InternalNumber<"2110">
+   * @description
    * Wokrs like this:
    *
    * First iteration: A: [1, 1, 2, 3]; B = [9, 8, 7]; Carry = 0; Sum = []
@@ -90,6 +92,20 @@ export namespace UInt {
 /*case: 4*/     ? Add<Init1, [], DecimalAddMap[Last1][0][Carry]["carry"], [DecimalAddMap[Last1][0][Carry]["sum"], ...Sum]>        
 /*case: 5*/     : Carry extends 1 ? [1, ...Sum] : Sum;
 
+  export type Increment<T extends Type> = Add<T, [1]>;
+
+  // prettier-ignore
+  /**
+   * @param Uints - Internal numbers e.g: [[1, 1, 2, 3], [9, 8, 7]]
+   * @param Agg - Aggregator for the sum, Defaults to []
+   * @returns The sum of all numbers in Uints
+   *
+   */
+  export type Sum<UInts extends Type[], Agg extends Type=[]> = 
+    UInts extends [infer Fst extends Type, ...infer Rest extends Type[]] 
+        ? Sum<Rest, Add<Agg, Fst>>
+        : Agg;
+
   /**
    * @param A - Internal number e.g: [2, 3]
    * @param Digit - Internal digit e.g: 9
@@ -100,7 +116,8 @@ export namespace UInt {
    *
    * @example
    * type X = MultiplyWithDigit<InternalNumber<"23">, 9>;
-   * -> X = InternalNumber<"207">
+   * // -> X = InternalNumber<"207">
+   * @description
    * Works like this:
    *
    * First iteration: A: [2, 3]; Digit = 9; Carry = 0; Product = [[], []]
@@ -136,7 +153,8 @@ export namespace UInt {
    * @returns The product of A and B
    * @example
    * type X = Multiply<InternalNumber<"23">, InternalNumber<"98">>;
-   * -> X = InternalNumber<"2254">
+   * //-> X = InternalNumber<"2254">
+   * @description
    * Works like this:
    *
    * First iteration: A: [2, 3]; B = [9, 8]; Filler = []; Product = []
@@ -155,8 +173,7 @@ export namespace UInt {
    * -> Sum<Product> = [2, 2, 5, 4]
    */
   // prettier-ignore
-  export type Multiply<A extends Type, B extends Type, Filler extends Type = [], Product extends Type[] = []
-> = 
+  export type Multiply<A extends Type, B extends Type, Filler extends Type = [], Product extends Type[] = []> = 
     B extends [...infer Init extends Type, infer Last extends DIGIT] 
         ? Last extends 0 
             ? Multiply<A, Init, [0, ...Filler], Product>
@@ -164,11 +181,39 @@ export namespace UInt {
         : FilterLeadingZeros<Sum<Product>>;
 
   // prettier-ignore
-  export type Sum<A extends Type[], Agg extends Type=[]> = 
+  export type Product<A extends Type[], Agg extends Type = [1]> = 
     A extends [infer Fst extends Type, ...infer Rest extends Type[]] 
-        ? Sum<Rest, Add<Agg, Fst>>
+        ? Product<Rest, Multiply<Agg, Fst>>
         : Agg;
 
+  /**
+   * @warning If B is bigger than A, the result will be incorrect
+   *
+   * @param A - Internal number e.g: [2, 3]
+   * @param B - Internal number e.g: [1, 8]
+   * @param Borrow - Borrow from the previous subtraction, Defaults to 0
+   * @param Difference - Aggregator for the difference, Defaults to []
+   * @returns The difference of A and B
+   *
+   * @example
+   * type X = Subtract<InternalNumber<"23">, InternalNumber<"18">>
+   * // -> X = InternalNumber<"5">
+   * @description
+   * Works like this:
+   * First iteration: A: [2, 3]; B = [1, 8]; Borrow = 0; Difference = []
+   * -> ALast = 3, BLast = 8
+   * -> DecimalSubtractMap[3][8][0] = {difference: 5, borrow: 1}
+   * -> Subtract<[2], [1], 1, [5]>
+   * Second iteration: A: [2]; B = [1]; Borrow = 1; Difference = [5]
+   * -> ALast = 2, BLast = 1
+   * -> DecimalSubtractMap[2][1][1] = {difference: 0, borrow: 0}
+   * -> Subtract<[], [], 0, [0, 5]>
+   * Third iteration: A: []; B = []; Borrow = 0; Difference = [0, 5]
+   * -> Borrow = 0
+   * -> FilterLeadingZeros<[0, 5]> = [0, 5]
+   * -> [5]
+   *
+   */
   // prettier-ignore
   export type Subtract<A extends Type, B extends Type, Borrow extends CARRY = 0, Difference extends Type = []> = 
     A extends [...infer AInit extends Type, infer ALast extends DIGIT] 
@@ -180,6 +225,8 @@ export namespace UInt {
             : B extends [...infer Init1 extends Type, infer Last1 extends DIGIT]                               
 /*case: 4*/     ? Subtract<Init1, [], DecimalSubtractMap[Last1][0][Borrow]["borrow"], [DecimalSubtractMap[Last1][0][Borrow]["difference"], ...Difference]>        
 /*case: 5*/     : Borrow extends 1 ? [1, ...Difference] : FilterLeadingZeros<Difference>;
+
+  export type Decrement<T extends Type> = Subtract<T, [1]>;
 
   //prettier-ignore
   type CountPossibleSubtractions<A extends Type, B extends Type> =
@@ -194,6 +241,46 @@ export namespace UInt {
     : Compare<A, Multiply<B, [9]>> extends "LESS_THAN" ? 8 
     : 9
 
+  /**
+   * @warning Floor division
+   * @param A - Internal number e.g: [2, 3]
+   * @param B - Internal number e.g: [1, 8]
+   * @param Divided - Aggregator for the division, Defaults to []
+   *
+   * @returns The division of A and B
+   *
+   * @example
+   * type X = Divide<InternalNumber<"23">, InternalNumber<"18">>
+   * // -> X = InternalNumber<"1">
+   * @description
+   * Implements long division algorithm
+   * https://en.wikipedia.org/wiki/Long_division#:~:text=In%20arithmetic%2C%20long%20division%20is,a%20series%20of%20easier%20steps.
+   * Works like this:
+   * First iteration: A: [2, 3]; B = [1, 8]; Divided = [], CurrentNum = []
+   * -> Head = 2, Tail = [3], CountPossibleSubtractions<CurrentNum, B> = 0
+   * -> Divide<[3], [1, 8], [...[], 0], [...Subtract<[], Multiply<B, [0]>>, 2]>
+   * -> Divide<[3], [1, 8], [0],        [...Subtract<[], Multiply<B, [0]>>, 2]>
+   * -> Divide<[3], [1, 8], [0],        [...Subtract<[], [0]>,              2]>
+   * -> Divide<[3], [1, 8], [0],        [...[0],                            2]>
+   * -> Divide<[3], [1, 8], [0],        [0, 2]>
+   *
+   * Second iteration: A: [3]; B = [1, 8]; Divided = [0], CurrentNum = [2]
+   * -> Head = 3, Tail = []
+   * -> CountPossibleSubtractions<CurrentNum, B> = 0
+   *
+   * -> Divide<[], [1, 8], [...[0], 0], [...Subtract<[2], Multiply<B, [0]>>, 3]>
+   * -> Divide<[], [1, 8], [0, 0],      [...Subtract<[2], Multiply<B, [0]>>, 3]>
+   * -> Divide<[], [1, 8], [0, 0],      [...Subtract<[2], [0]>, 3]>
+   * -> Divide<[], [1, 8], [0, 0],      [...[2], 3]>
+   * -> Divide<[], [1, 8], [0, 0],      [2, 3]>
+   *
+   * Third iteration: A: []; B = [1, 8]; Divided = [0, 0], CurrentNum = [2, 3]
+   * -> FilterLeadingZeros<[...Divided, CountPossibleSubtractions<CurrentNum, B>]>
+   * -> FilterLeadingZeros<[...[0, 0],  CountPossibleSubtractions<[2, 3], [1, 8]>]>
+   * -> FilterLeadingZeros<[...[0, 0],  1]>
+   * -> FilterLeadingZeros<[0, 0, 1]> = [1]
+   *
+   */
   //prettier-ignore
   export type Divide<
   A extends Type,
@@ -207,6 +294,18 @@ export namespace UInt {
   : FilterLeadingZeros<[...Divided, CountPossibleSubtractions<CurrentNum, B>]>;
 
   //prettier-ignore
+  /**
+   * @param A - Internal number e.g: [5, 0]
+   * @param B - Internal number e.g: [2]
+   *
+   * @returns The modulo of A and B
+   *
+   * @example
+   * type X = Modulo<InternalNumber<"50">, InternalNumber<"2">>
+   * // -> X = InternalNumber<"0">
+   * @description
+   * Work like Division but instead of returning the quotient, it returns the remainder.
+   */
   export type Modulo<
   A extends Type,
   B extends Type,
@@ -216,14 +315,10 @@ export namespace UInt {
             [...Subtract<CurrentNum, Multiply<B, [CountPossibleSubtractions<CurrentNum, B>]>>, Head]>
   : FilterLeadingZeros<Subtract<CurrentNum, Multiply<B, [CountPossibleSubtractions<CurrentNum, B>]>>>;
 
-  type Not<A extends boolean> = A extends true ? false : true;
-  export type IsEven<A extends Type> = A extends [...infer _, infer Last]
-    ? Last extends 0 | 2 | 4 | 6 | 8
-      ? true
-      : false
+  export type IsEven<A extends Type> = A extends [...any[], 0 | 2 | 4 | 6 | 8]
+    ? true
     : false;
-
-  export type IsOdd<A extends Type> = Not<IsEven<A>>;
+  export type IsOdd<A extends Type> = Bool.Not<IsEven<A>>;
 
   // prettier-ignore
   type FilterLeadingZeros<T extends Type> = 
@@ -231,15 +326,46 @@ export namespace UInt {
         ? FilterLeadingZeros<Rest>
         : T extends [] ? [0] : T;
 
+  /**
+   * @param A - Internal number e.g: [2, 3]
+   * @param B - Internal number e.g: [1, 8]
+   * @param Compared - Aggregator for the comparison, Defaults to []
+   * @returns The comparison of A and B
+   * @example
+   * type X = Compare<InternalNumber<"23">, InternalNumber<"18">>
+   * // -> X = "GREATER_THAN"
+   * @description
+   * Works like this:
+   * First iteration: A: [1, 2, 3]; B = [2, 3]; Compared = []
+   * -> ALast = 3, BLast = 3, AInit = [1, 2], BInit = [2]
+   * -> CompareMap[3][3] = "EQUAL"
+   * -> Compare<[1, 2], [2], ["EQUAL"]>
+   *
+   * Second iteration: A: [1, 2]; B = [2]; Compared = ["EQUAL"]
+   * -> ALast = 2, BLast = 2, AInit = [1], BInit = []
+   * -> CompareMap[2][2] = "EQUAL"
+   * -> Compare<[1], [], ["EQUAL", "EQUAL"]>
+   *
+   * Third iteration: A: [1]; B = []; Compared = ["EQUAL", "EQUAL"]
+   * -> ALast = 1, BLast = never, AInit = [], BInit = []
+   * -> CompareMap[1][0] = "GREATER_THAN"
+   * -> Compare<[], [], ["GREATER_THAN", "EQUAL", "EQUAL"]>
+   *
+   * Fourth iteration: A: []; B = []; Compared = ["GREATER_THAN", "EQUAL", "EQUAL"]
+   * -> ALast = never, BLast = never, AInit = [], BInit = []
+   * -> ResolveCompare<["GREATER_THAN", "EQUAL", "EQUAL"]> = "GREATER_THAN"
+   * -> "GREATER_THAN"
+   *
+   */
   // prettier-ignore
-  export type Compare<A extends Type, B extends Type, Zip extends (GREATER_THAN | LESS_THAN | EQUAL)[] = []> = 
+  export type Compare<A extends Type, B extends Type, Compared extends (GREATER_THAN | LESS_THAN | EQUAL)[] = []> = 
     A extends [...infer AInit extends Type, infer ALast extends DIGIT] 
         ? B extends [...infer BInit extends Type, infer BLast extends DIGIT]
-            ? Compare<AInit, BInit, [CompareMap[ALast][BLast], ...Zip]>
-            : Compare<AInit, [], [CompareMap[ALast][0], ...Zip]>
+            ? Compare<AInit, BInit, [CompareMap[ALast][BLast], ...Compared]>
+            : Compare<AInit, [], [CompareMap[ALast][0], ...Compared]>
         : B extends [...infer BInit extends Type, infer BLast extends DIGIT]
-            ? Compare<[], BInit, [CompareMap[0][BLast], ...Zip]>
-            : ResolveCompare<Zip>
+            ? Compare<[], BInit, [CompareMap[0][BLast], ...Compared]>
+            : ResolveCompare<Compared>
 
   //prettier-ignore
   export type ResolveCompare<Zip extends (GREATER_THAN | LESS_THAN | EQUAL)[] = []> =
@@ -249,60 +375,70 @@ export namespace UInt {
             : Fst
         : EQUAL;
 
-  export type Power<A extends Type, B extends Type> = B extends [0]
-    ? [1]
-    : Multiply<A, Power<A, Subtract<B, [1]>>>;
-
-  type __Root_Next<A extends Type, Prev extends Type> = Divide<
-    Add<Prev, Divide<A, Prev>>,
-    [2]
-  >;
+  /**
+   * @param A - Internal number e.g: [2, 3]
+   * @param B - Internal number e.g: [1, 8]
+   * @param Agg - Aggregator for the power, Defaults to [1]
+   * @returns The power of A and B
+   * @example
+   * type X = Power<InternalNumber<"2">, InternalNumber<"3">>
+   * // -> X = InternalNumber<"8">
+   */
+  //prettier-ignore
+  export type Power<A extends Type, B extends Type,Agg extends Type = [1]> = 
+    B extends [0]
+      ? [1]
+      : Power<A, Subtract<B, [1]>, Multiply<Agg, A>>;
 
   //prettier-ignore
-  type __SquareRoot__<
-  A extends Type,
-  Approximation extends Type,
-  IterationCount extends number = 4,
-  Count extends any[] = []
-> = Count["length"] extends IterationCount
-  ? Approximation 
-  : __SquareRoot__<A, __Root_Next<A, Approximation>, IterationCount, [...Count, unknown]>;
+  /**
+   * https://en.wikipedia.org/wiki/Newton%27s_method
+   */
+  type Newton_Method_Sqt< A extends Type, Approximation extends Type, IterationCount extends number = 4, Count extends any[] = []> = 
+    Count["length"] extends IterationCount  
+    ? Approximation 
+    : Newton_Method_Sqt<A, Divide<Add<Approximation, Divide<A, Approximation>>, [2]>, IterationCount, [...Count, unknown]>;
 
-  type CeilSplit<
+  type EducatedGuess<
     A extends Type,
     Return extends any[] = [],
     Count extends any[] = []
   > = A extends [infer H extends DIGIT, ...infer Tail extends Type]
     ? Count extends [...Tail, ...any[]]
       ? Return
-      : CeilSplit<Tail, [...Return, H], [...Count, any]>
+      : EducatedGuess<Tail, [...Return, H], [...Count, any]>
     : Return;
 
-  export type SquareRoot<A extends Type> = __SquareRoot__<
+  export type SquareRoot<A extends Type> = Newton_Method_Sqt<
     A,
-    Divide<A, CeilSplit<A>>,
+    Divide<A, EducatedGuess<A>>,
     5
   >;
-  type NextGuess<
+
+  //prettier-ignore
+  /**
+   * https://en.wikipedia.org/wiki/Newton%27s_method
+   */
+  type Newton_Method_N<
     Base extends Type,
     N extends Type,
     Previous extends Type
   > = Subtract<
-    Previous,
-    Divide<
-      Subtract<Power<Previous, N>, Base>,
-      Multiply<N, Power<Previous, Subtract<N, [1]>>>
-    >
-  >;
+        Previous,
+        Divide<
+          Subtract<Power<Previous, N>, Base>,
+          Multiply<N, Power<Previous, Subtract<N, [1]>>>
+        >
+      >;
 
   //prettier-ignore
   export type Root<
-  A extends Type,
-  B extends Type,
-  Approximation extends Type,
-  IterationCount extends number = 10,
-  Count extends any[] = []
+    A extends Type,
+    B extends Type,
+    Approximation extends Type,
+    IterationCount extends number = 10,
+    Count extends any[] = []
 > = Count["length"] extends IterationCount
   ? Approximation 
-  : Root<A,B, NextGuess<A,B, Approximation>, IterationCount, [...Count, unknown]>;
+  : Root<A,B, Newton_Method_N<A,B, Approximation>, IterationCount, [...Count, unknown]>;
 }

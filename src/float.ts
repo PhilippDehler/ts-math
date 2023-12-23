@@ -1,4 +1,4 @@
-import { BOOL } from "./boolean";
+import { Bool } from "./boolean";
 import { Int } from "./int";
 import { UInt } from "./uint";
 
@@ -54,7 +54,7 @@ export namespace Float {
   };
 
   export type Divide<A extends Type, B extends Type> = {
-    sign: BOOL.XNOR<A["sign"], B["sign"]>;
+    sign: Bool.XNOR<A["sign"], B["sign"]>;
     digits: UInt.Divide<Append<A["digits"], A["precision"]>, B["digits"]>;
     precision: A["precision"];
   };
@@ -66,7 +66,7 @@ export namespace Float {
   > = Drop<UInt.Multiply<A, B>, P>;
 
   export type Multiply<A extends Type, B extends Type> = {
-    sign: BOOL.XNOR<A["sign"], B["sign"]>;
+    sign: Bool.XNOR<A["sign"], B["sign"]>;
     digits: SignLessMultiply<A["digits"], B["digits"], A["precision"]>;
     precision: A["precision"] & B["precision"];
   };

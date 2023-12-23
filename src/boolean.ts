@@ -1,4 +1,4 @@
-export namespace BOOL {
+export namespace Bool {
   export type XNOR<A extends boolean, B extends boolean> = A extends B
     ? true
     : false;
