@@ -2,7 +2,7 @@ import { BOOL } from "./boolean";
 import { Int } from "./int";
 import { UInt } from "./uint";
 
-export namespace FLOAT {
+export namespace Float {
   export type Type = { precision: number; sign: boolean; digits: UInt.Type };
   //prettier-ignore
   export type Parse<
@@ -17,7 +17,7 @@ export namespace FLOAT {
   export type Print<T extends Type> = `${Int.Print<{
     sign: T["sign"];
     digits: Drop<T["digits"], T["precision"]>;
-  }>}.${UInt.Print<DropAndTake<T["digits"], T["precision"]>>}`;
+  }>}.${UInt.Print<TakeRight<T["digits"], T["precision"]>>}`;
 
   //prettier-ignore
   type AppendZeros<T extends string, Precision extends number, Agg extends string = "", C extends any[] = []> = 
@@ -34,21 +34,21 @@ export namespace FLOAT {
             ? Drop<Tail, Precision, [...Counter, any]>
             : [];
   //prettier-ignore
-  type DropAndTake<T extends UInt.Type, Precision extends number, Counter extends UInt.Type = []> = 
+  type TakeRight<T extends UInt.Type, Precision extends number, Counter extends UInt.Type = []> = 
     Counter["length"] extends Precision
         ? Counter
         : T extends [...infer Tail extends UInt.Type, infer Last extends UInt.DIGIT]
-            ? DropAndTake<Tail, Precision, [Last, ...Counter]>
-            : DropAndTake<T, Precision, [...Counter, 0]>;
+            ? TakeRight<Tail, Precision, [Last, ...Counter]>
+            : TakeRight<T, Precision, [...Counter, 0]>;
 
   export type Add<A extends Type, B extends Type> = {
-    sign: BOOL.XNOR<A["sign"], B["sign"]>;
+    sign: Int.Add<A, B>["sign"];
     digits: Int.Add<A, B>["digits"];
     precision: A["precision"] & B["precision"];
   };
 
   export type Subtract<A extends Type, B extends Type> = {
-    sign: BOOL.XNOR<A["sign"], B["sign"]>;
+    sign: Int.Subtract<A, B>["sign"];
     digits: Int.Subtract<A, B>["digits"];
     precision: A["precision"];
   };
@@ -59,10 +59,30 @@ export namespace FLOAT {
     precision: A["precision"];
   };
 
+  type SignLessMultiply<
+    A extends Type["digits"],
+    B extends Type["digits"],
+    P extends Type["precision"]
+  > = Drop<UInt.Multiply<A, B>, P>;
+
   export type Multiply<A extends Type, B extends Type> = {
     sign: BOOL.XNOR<A["sign"], B["sign"]>;
-    digits: Drop<UInt.Multiply<A["digits"], B["digits"]>, A["precision"]>;
+    digits: SignLessMultiply<A["digits"], B["digits"], A["precision"]>;
     precision: A["precision"] & B["precision"];
+  };
+
+  type __Power<
+    A extends Type["digits"],
+    B extends Type["digits"],
+    P extends Type["precision"]
+  > = B extends [0] | []
+    ? Append<[1], P>
+    : SignLessMultiply<A, __Power<A, UInt.Subtract<B, [1]>, P>, P>;
+
+  export type Power<A extends Type, B extends UInt.Type> = {
+    sign: UInt.IsEven<B> extends true ? true : A["sign"];
+    digits: __Power<A["digits"], B, A["precision"]>;
+    precision: A["precision"];
   };
 
   export type Append<
@@ -73,38 +93,57 @@ export namespace FLOAT {
     ? [...T, ...Agg]
     : Append<T, Precision, [0, ...Agg]>;
 
-  //   type P<A extends Type, B extends Type> = {
-  //     sign: UInt.__IsEven<B> extends true ? true : A["sign"];
-  //     digits: Power<A["digits"], B>;
-  //   };
+  type NextGuess<
+    Base extends Type,
+    N extends UInt.Type,
+    Previous extends Type
+  > = Subtract<
+    Previous,
+    Divide<
+      Subtract<Power<Previous, N>, Base>,
+      Multiply<
+        UIntToFloat<N, Base["precision"]>,
+        Power<Previous, UInt.Subtract<N, [1]>>
+      >
+    >
+  >;
 
-  //   type NextGuess<
-  //     Base extends Type,
-  //     N extends Type,
-  //     Previous extends Type
-  //   > = Subtract<
-  //     Previous,
-  //     Divide<
-  //       Subtract<Power<Previous, N>, Base>,
-  //       Multiply<N, Power<Previous, Subtract<N, [1]>>>
-  //     >
-  //   >;
+  type UIntToFloat<T extends UInt.Type, P extends number> = {
+    sign: true;
+    digits: Append<T, P>;
+    precision: P;
+  };
 
-  //   //prettier-ignore
-  //   export type Root<
-  //   A extends Type,
-  //   B extends Type,
-  //   Approximation extends Type,
-  //   IterationCount extends number = 10,
-  //   Count extends any[] = []
-  // > = Count["length"] extends IterationCount
-  //   ? Approximation
-  //   : Root<A,B, NextGuess<A,B, Approximation>, IterationCount, [...Count, unknown]>;
-  // }
+  //prettier-ignore
+  export type ApproximateRoot<
+    A extends Type & { sign: true },
+    B extends UInt.Type,
+    Approximation extends Type = Parse<"3", A["precision"]>,
+    IterationCount extends number = 6,
+    Count extends any[] = []
+  > = Count["length"] extends IterationCount
+    ? Approximation
+    : ApproximateRoot<A,B, NextGuess<A,B, Approximation>, IterationCount, [...Count, unknown]>;
+
+  type A = Print<
+    // ^?
+    // 1024 ** (1/8)
+    ApproximateRoot<Parse<"1024.0", 8>, UInt.Parse<"2">, Parse<"15", 8>, 4>
+    //                      ^- Base     ^- N-th root
+    //                             ^-Precision of float     ^- Initial guess
+    //                                                                   ^- Iteration count
+  >;
+
+  // type B = Print<
+  //   // ^?
+  //   ApproximateRoot<Parse<"1024.0">, UInt.Parse<"4">>
+  // >;
+  // type C = Print<
+  //   // ^?
+  //   ApproximateRoot<Parse<"1024.0">, UInt.Parse<"8">>
+  // >;
+  // type D = Print<
+  //   // ^?
+  //   ApproximateRoot<Parse<"1024.0">, UInt.Parse<"2">>
+  // >;
 }
-// type GH = Float<"1.20">;
-// type GHG = Float<"7.00">;
-// type GGGG = Append<GH["digits"], GH["precision"]>;
-// type OO = __Division<Append<GHG["digits"], 4, []>, GH["digits"]>;
-// type GG = ToReadableFloat<FloatDivide<Float<"1.2000">, Float<"2.4000">>>;
-// type digits = __Division<GGGG, GHG["digits"]>;

@@ -83,14 +83,14 @@ export namespace Int {
   export type IsOdd<A extends Type> = BOOL.Not<IsEven<A>>;
 
   export type Power<A extends Type, B extends UInt.Type> = {
-    sign: UInt.__IsEven<B> extends true ? true : A["sign"];
+    sign: UInt.IsEven<B> extends true ? true : A["sign"];
     digits: UInt.Power<A["digits"], B>;
   };
 
   export type Abs<A extends Type> = A["digits"];
 
   export type SquareRoot<A extends Type> = {
-    sign: boolean;
+    sign: true;
     digits: UInt.SquareRoot<A["digits"]>;
   };
 }

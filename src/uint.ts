@@ -161,7 +161,7 @@ export namespace UInt {
         ? Last extends 0 
             ? Multiply<A, Init, [0, ...Filler], Product>
             : Multiply<A, Init, [0, ...Filler], [[...__MultiplyWithDigit<A, Last>, ...Filler], ...Product]>
-        : Sum<Product>;
+        : FilterLeadingZeros<Sum<Product>>;
 
   // prettier-ignore
   export type Sum<A extends Type[], Agg extends Type=[]> = 
@@ -217,12 +217,13 @@ export namespace UInt {
   : FilterLeadingZeros<Subtract<CurrentNum, Multiply<B, [CountPossibleSubtractions<CurrentNum, B>]>>>;
 
   type Not<A extends boolean> = A extends true ? false : true;
-  export type __IsEven<A extends Type> = A extends [...infer _, infer Last]
+  export type IsEven<A extends Type> = A extends [...infer _, infer Last]
     ? Last extends 0 | 2 | 4 | 6 | 8
       ? true
       : false
     : false;
-  export type __IsOdd<A extends Type> = Not<__IsEven<A>>;
+
+  export type IsOdd<A extends Type> = Not<IsEven<A>>;
 
   // prettier-ignore
   type FilterLeadingZeros<T extends Type> = 
