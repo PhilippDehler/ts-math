@@ -66,14 +66,9 @@ export namespace Float {
     digits: UInt.Divide<Append<A["digits"]>, B["digits"]>;
   };
 
-  type SignLessMultiply<
-    A extends Type["digits"],
-    B extends Type["digits"]
-  > = Drop<UInt.Multiply<A, B>>;
-
   export type Multiply<A extends Type, B extends Type> = {
     sign: Bool.XNOR<A["sign"], B["sign"]>;
-    digits: SignLessMultiply<A["digits"], B["digits"]>;
+    digits: Drop<UInt.Multiply<A["digits"], B["digits"]>>;
   };
 
   //prettier-ignore
