@@ -45,14 +45,10 @@ export namespace Float {
         ? { sign: true; digits: UInt.Parse<`${Fst}${AppendZeros<Rest>}`> }
         : { sign: true; digits: UInt.Parse<`${T}${AppendZeros<"">}`> };
 
-  export type Print<T extends Type> = T extends Int.NaN
-    ? "NaN"
-    : T["digits"] extends UInt.Infinity
-    ? Print<T>
-    : `${Int.Print<{
-        sign: T["sign"];
-        digits: Drop<T["digits"]>;
-      }>}.${UInt.Print<TakeRight<T["digits"]>>}`;
+  export type Print<T extends Type> = `${Int.Print<{
+    sign: T["sign"];
+    digits: Drop<T["digits"]>;
+  }>}.${UInt.Print<TakeRight<T["digits"]>>}`;
 
   export type Add<A extends Type, B extends Type> = Int.Add<A, B>;
   //prettier-ignore
@@ -121,11 +117,12 @@ export namespace Float {
   type A = Print<
     // ^?
     // 1024 ** (1/8)
-    ApproximateRoot<Parse<"1024.0">, UInt.Parse<"2">, Parse<"15">, 4>
+    ApproximateRoot<Parse<"1024.0">, UInt.Parse<"10">, Parse<"15">, 1>
     //                      ^- Base     ^- N-th root
     //                             ^-Precision of float     ^- Initial guess
     //                                                                   ^- Iteration count
   >;
+  type X = Print<Divide<Parse<"1.0">, Parse<"3.0">>>;
 
   // type B = Print<
   //   // ^?
